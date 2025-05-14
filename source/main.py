@@ -5,6 +5,25 @@ import torch
 import random
 import numpy as np
 
+# --- 您的种子设置 ---
+seed = 42 # 或者论文中使用的种子
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) # for multi-GPU.
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+cuda_generator = None
+if device.type == 'cuda':
+    cuda_generator = torch.Generator(device=device)
+    if 'seed' in locals() and seed is not None: # 确保种子已定义
+        cuda_generator.manual_seed(seed)
+print(f"CUDA Generator: {cuda_generator}")
+
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 SAVE_ROOT_IMAGE = os.path.join(FILE_DIR, '../results/%s/%s/')
 SAVE_ROOT_GENERAL = os.path.join(FILE_DIR, '../results/%s/')
