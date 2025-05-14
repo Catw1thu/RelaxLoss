@@ -81,7 +81,7 @@ np.random.seed(_seed)
 torch.manual_seed(_seed)
 
 # --- 设置默认设备并为CUDA设定种子 ---
-if torch.cuda.is_available() and not getattr(args, 'no_cuda', False):
+if torch.cuda.is_available():
     torch.set_default_device('cuda')  # <--- 关键：设置默认设备为CUDA
     torch.cuda.manual_seed(_seed)     # 为当前GPU设置种子
     torch.cuda.manual_seed_all(_seed) # 为所有GPU设置种子 (如果使用多GPU)
