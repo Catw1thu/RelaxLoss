@@ -77,10 +77,10 @@ class Attacker(BaseAttacker):
                                        download=True, transform=self.transform_train)
         shadow_testset = self.dataset(root=self.data_root, indices=shadow_test_idx,
                                       download=True, transform=self.transform_test)
-        self.target_trainloader = torch.utils.data.DataLoader(target_trainset, batch_size=self.args.test_batchsize, shuffle=False)
-        self.target_testloader = torch.utils.data.DataLoader(target_testset, batch_size=self.args.test_batchsize, shuffle=False)
-        self.shadow_trainloader = torch.utils.data.DataLoader(shadow_trainset, batch_size=self.args.test_batchsize, shuffle=False)
-        self.shadow_testloader = torch.utils.data.DataLoader(shadow_testset, batch_size=self.args.test_batchsize, shuffle=False)
+        self.target_trainloader = torch.utils.data.DataLoader(target_trainset, batch_size=self.args.test_batchsize, shuffle=False, generator=cuda_generator)
+        self.target_testloader = torch.utils.data.DataLoader(target_testset, batch_size=self.args.test_batchsize, shuffle=False, generator=cuda_generator)
+        self.shadow_trainloader = torch.utils.data.DataLoader(shadow_trainset, batch_size=self.args.test_batchsize, shuffle=False, generator=cuda_generator)
+        self.shadow_testloader = torch.utils.data.DataLoader(shadow_testset, batch_size=self.args.test_batchsize, shuffle=False, generator=cuda_generator)
         self.loader_dict = {'s_pos': self.shadow_trainloader, 's_neg': self.shadow_testloader,
                             't_pos': self.target_trainloader, 't_neg': self.target_testloader}
 

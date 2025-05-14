@@ -1,6 +1,9 @@
 import os
 import sys
 import argparse
+import torch
+import random
+import numpy as np
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 SAVE_ROOT_IMAGE = os.path.join(FILE_DIR, '../results/%s/%s/')

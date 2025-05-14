@@ -40,8 +40,8 @@ class NonImageTrainer(BaseTrainer):
             testset = shadow_test
 
         ## Set dataloader
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.args.train_batchsize, shuffle=True)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=self.args.test_batchsize, shuffle=False)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.args.train_batchsize, shuffle=True, generator=cuda_generator)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=self.args.test_batchsize, shuffle=False, generator=cuda_generator)
         self.trainset = trainset
         self.testset = testset
         self.trainloader = trainloader
