@@ -101,7 +101,7 @@ class Trainer(CIFARTrainer):
     def add_distill_loader(self):
         """Adding teacher prediction to the dataloader"""
         dataloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.args.train_batchsize,
-                                                 shuffle=False, num_workers=self.args.num_workers, generator=cuda_generator)
+                                                 shuffle=False, num_workers=self.args.num_workers)
 
         self.teacher_model.eval()
         teacher_outputs = []
@@ -114,7 +114,7 @@ class Trainer(CIFARTrainer):
         distill_dataset = DistillDataset(self.trainset, teacher_outputs)
         self.distillset = distill_dataset
         self.distillloader = torch.utils.data.DataLoader(self.distillset, batch_size=self.args.train_batchsize,
-                                                         shuffle=True, num_workers=self.args.num_workers, generator=cuda_generator)
+                                                         shuffle=True, num_workers=self.args.num_workers)
 
     def train_dynamic(self, model, optimizer):
         model.train()

@@ -140,7 +140,7 @@ class Trainer(NonImageTrainer):
         self.attack_member_loader = self.trainloader
         self.attack_nonmember_loader = torch.utils.data.DataLoader(self.pseudo_attack,
                                                                    batch_size=self.args.train_batchsize,
-                                                                   shuffle=True, generator=cuda_generator)
+                                                                   shuffle=True)
 
     def attack_input_transform(self, x, y):
         """Transform the input to attack model"""

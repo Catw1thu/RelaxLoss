@@ -73,9 +73,9 @@ class CIFARTrainer(BaseTrainer):
         testset = self.dataset(root=self.data_root, indices=self.testset_idx,
                                download=True, transform=self.transform_test)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.args.train_batchsize,
-                                                  shuffle=True, num_workers=self.args.num_workers, generator=cuda_generator)
+                                                  shuffle=True, num_workers=self.args.num_workers)
         testloader = torch.utils.data.DataLoader(testset, batch_size=self.args.test_batchsize,
-                                                 shuffle=False, num_workers=self.args.num_workers, generator=cuda_generator)
+                                                 shuffle=False, num_workers=self.args.num_workers)
         self.trainset = trainset
         self.trainloader = trainloader
         self.testset = testset

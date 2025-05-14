@@ -5,24 +5,6 @@ import torch
 import random
 import numpy as np
 
-# --- 您的种子设置 ---
-seed = 42 # 或者论文中使用的种子
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed) # for multi-GPU.
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-cuda_generator = None
-if device.type == 'cuda':
-    cuda_generator = torch.Generator(device=device)
-    if 'seed' in locals() and seed is not None: # 确保种子已定义
-        cuda_generator.manual_seed(seed)
-print(f"CUDA Generator: {cuda_generator}")
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 SAVE_ROOT_IMAGE = os.path.join(FILE_DIR, '../results/%s/%s/')
@@ -91,6 +73,22 @@ def run_shadow(dataset_prefix, save_root, args, method):
 def run_attack(dataset_prefix, target, shadow):
     os.system(f'python {dataset_prefix}/run_attacks.py -target {target} -shadow {shadow}')
 
+# --- 确保种子设定 ---
+# 这里的 seed 应该从 args 或一个固定值获取
+_seed = 42 # 确保args有seed属性或提供默认
+random.seed(_seed)
+np.random.seed(_seed)
+torch.manual_seed(_seed)
+
+# --- 设置默认设备并为CUDA设定种子 ---
+if torch.cuda.is_available() and not getattr(args, 'no_cuda', False):
+    torch.set_default_device('cuda')  # <--- 关键：设置默认设备为CUDA
+    torch.cuda.manual_seed(_seed)     # 为当前GPU设置种子
+    torch.cuda.manual_seed_all(_seed) # 为所有GPU设置种子 (如果使用多GPU)
+    print(f"[Main Script] Default device set to CUDA. CUDA RNGs seeded with {_seed}.")
+else:
+    torch.set_default_device('cpu')
+    print(f"[Main Script] Default device set to CPU. CPU RNG seeded with {_seed}.")
 
 def main():
     args = parse_arguments()

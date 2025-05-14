@@ -135,7 +135,7 @@ class Trainer(CIFARTrainer):
         self.attack_member_loader = self.trainloader
         self.attack_nonmember_loader = torch.utils.data.DataLoader(attack_nonmember_data,
                                                                    batch_size=self.args.train_batchsize,
-                                                                   shuffle=True, num_workers=self.args.num_workers, generator=cuda_generator)
+                                                                   shuffle=True, num_workers=self.args.num_workers)
 
     def attack_input_transform(self, x, y):
         """Transform the input to attack model"""
