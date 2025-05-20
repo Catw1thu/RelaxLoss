@@ -8,13 +8,13 @@ import numpy as np
 import abc
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_ROOT = os.path.join(FILE_DIR, '../../data')
+DATA_ROOT = os.path.join(FILE_DIR, "../../data")
 from .misc import Partition, get_all_losses, savefig
 from .logger import AverageMeter, Logger
 from .eval import accuracy, accuracy_binary
 from progress.bar import Bar as Bar
 
-__all__ = ['BaseTrainer']
+__all__ = ["BaseTrainer"]
 
 
 class BaseTrainer(object):
@@ -25,6 +25,9 @@ class BaseTrainer(object):
         self.args = the_args
         self.save_dir = save_dir
         self.data_root = DATA_ROOT
+        self.device = None
+        self.use_cuda = None
+        self.cude_generator = None
         self.set_cuda_device()
         self.set_seed()
         self.set_dataloader()
@@ -33,20 +36,31 @@ class BaseTrainer(object):
 
     def set_cuda_device(self):
         """The function to set CUDA device."""
-        self.use_cuda = torch.cuda.is_available()
+        use_cuda_if_available = not getattr(self.args, "no_cuda", False)
+        self.use_cuda = torch.cuda.is_available() and use_cuda_if_available
         if self.use_cuda:
-            torch.set_default_tensor_type('torch.cuda.FloatTensor')
-        if hasattr(self.args, 'num_workers') and self.args.num_workers >= 1:
-            torch.multiprocessing.set_start_method('spawn')
+            self.device = torch.device("cuda")
+            # torch.set_default_tensor_type("torch.cuda.FloatTensor")
+        else:
+            self.device = torch.device("cpu")
+        if hasattr(self.args, "num_workers") and self.args.num_workers >= 1:
+            torch.multiprocessing.set_start_method("spawn")
         self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
     def set_seed(self):
         """Set random seed"""
-        random.seed(self.args.random_seed)
-        torch.manual_seed(self.args.random_seed)
-        np.random.seed(self.args.random_seed)
+        _seed = getattr(self.args, "seed", getattr(self.args, "random_seed", 1000))
+
+        random.seed(_seed)
+        torch.manual_seed(_seed)
+        np.random.seed(_seed)
         if self.use_cuda:
-            torch.cuda.manual_seed_all(self.args.random_seed)
+            torch.cuda.manual_seed(_seed)
+            torch.cuda.manual_seed_all(_seed)
+            self.cuda_generator = torch.Generator(device=self.device)
+            self.cuda_generator.manual_seed(_seed)
+        else:
+            self.cuda_generator = None
 
     @abc.abstractmethod
     def set_dataloader(self):
@@ -70,15 +84,27 @@ class BaseTrainer(object):
         """Set up logger"""
         title = self.args.dataset
         self.start_epoch = 0
-        logger = Logger(os.path.join(self.save_dir, 'log.txt'), title=title)
-        logger.set_names(['LR', 'Train Loss', 'Val Loss', 'Train Acc', 'Val Acc', 'Train Acc 5', 'Val Acc 5'])
+        logger = Logger(os.path.join(self.save_dir, "log.txt"), title=title)
+        logger.set_names(
+            [
+                "LR",
+                "Train Loss",
+                "Val Loss",
+                "Train Acc",
+                "Val Acc",
+                "Train Acc 5",
+                "Val Acc 5",
+            ]
+        )
         self.logger = logger
 
     def set_criterion(self):
         """Set up criterion"""
-        self.criterion = nn.CrossEntropyLoss()
-        self.crossentropy = nn.CrossEntropyLoss()
-        self.crossentropy_noreduce = nn.CrossEntropyLoss(reduction='none')
+        self.criterion = nn.CrossEntropyLoss().to(self.device)
+        self.crossentropy = nn.CrossEntropyLoss().to(self.device)
+        self.crossentropy_noreduce = nn.CrossEntropyLoss(reduction="none").to(
+            self.device
+        )
 
     def train(self, model, optimizer, *args):
         """Train"""
@@ -91,7 +117,7 @@ class BaseTrainer(object):
         dataload_time = AverageMeter()
         time_stamp = time.time()
 
-        bar = Bar('Processing', max=len(self.trainloader))
+        bar = Bar("Processing", max=len(self.trainloader))
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
 
@@ -118,7 +144,7 @@ class BaseTrainer(object):
             time_stamp = time.time()
 
             ### Progress bar
-            bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+            bar.suffix = "({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}".format(
                 batch=batch_idx + 1,
                 size=len(self.trainloader),
                 data=dataload_time.avg,
@@ -145,7 +171,7 @@ class BaseTrainer(object):
         dataload_time = AverageMeter()
         time_stamp = time.time()
 
-        bar = Bar('Processing', max=len(self.testloader))
+        bar = Bar("Processing", max=len(self.testloader))
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(self.testloader):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -168,7 +194,7 @@ class BaseTrainer(object):
                 time_stamp = time.time()
 
                 ### Progress bar
-                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                bar.suffix = "({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}".format(
                     batch=batch_idx + 1,
                     size=len(self.testloader),
                     data=dataload_time.avg,
@@ -184,15 +210,19 @@ class BaseTrainer(object):
         return (losses.avg, top1.avg, top5.avg)
 
     def get_loss_distributions(self, model):
-        """ Obtain the member and nonmember loss distributions"""
-        train_losses = get_all_losses(self.trainloader, model, self.crossentropy_noreduce, self.device)
-        test_losses = get_all_losses(self.testloader, model, self.crossentropy_noreduce, self.device)
+        """Obtain the member and nonmember loss distributions"""
+        train_losses = get_all_losses(
+            self.trainloader, model, self.crossentropy_noreduce, self.device
+        )
+        test_losses = get_all_losses(
+            self.testloader, model, self.crossentropy_noreduce, self.device
+        )
         return train_losses, test_losses
 
     def logger_plot(self):
-        """ Visualize the training progress"""
-        self.logger.plot(['Train Loss', 'Val Loss'])
-        savefig(os.path.join(self.save_dir, 'loss.png'))
+        """Visualize the training progress"""
+        self.logger.plot(["Train Loss", "Val Loss"])
+        savefig(os.path.join(self.save_dir, "loss.png"))
 
-        self.logger.plot(['Train Acc', 'Val Acc'])
-        savefig(os.path.join(self.save_dir, 'acc.png'))
+        self.logger.plot(["Train Acc", "Val Acc"])
+        savefig(os.path.join(self.save_dir, "acc.png"))
