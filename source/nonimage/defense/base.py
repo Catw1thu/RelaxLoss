@@ -48,14 +48,14 @@ class NonImageTrainer(BaseTrainer):
             trainset,
             batch_size=self.args.train_batchsize,
             shuffle=True,
-            generator=(
-                self.cuda_generator
-                if self.use_cuda
-                and self.cuda_generator is not None
-                and trainset
-                and len(trainset) > 0
-                else None
-            ),
+            # generator=(
+            #     self.cuda_generator
+            #     if self.use_cuda
+            #     and self.cuda_generator is not None
+            #     and trainset
+            #     and len(trainset) > 0
+            #     else None
+            # ),
         )
         testloader = torch.utils.data.DataLoader(
             testset,

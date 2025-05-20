@@ -104,14 +104,14 @@ class CIFARTrainer(BaseTrainer):
             batch_size=self.args.train_batchsize,
             shuffle=True,
             num_workers=self.args.num_workers,
-            generator=(
-                self.cuda_generator
-                if self.use_cuda
-                and self.cuda_generator is not None
-                and trainset
-                and len(trainset) > 0
-                else None
-            ),
+            # generator=(
+            #     self.cuda_generator
+            #     if self.use_cuda
+            #     and self.cuda_generator is not None
+            #     and trainset
+            #     and len(trainset) > 0
+            #     else None
+            # ),
         )
         testloader = torch.utils.data.DataLoader(
             testset,
