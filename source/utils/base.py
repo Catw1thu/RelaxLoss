@@ -46,6 +46,7 @@ class BaseTrainer(object):
         if hasattr(self.args, "num_workers") and self.args.num_workers >= 1:
             torch.multiprocessing.set_start_method("spawn")
         self.device = torch.device("cuda" if self.use_cuda else "cpu")
+        print("self.usecuda", self.use_cuda)
 
     def set_seed(self):
         """Set random seed"""
