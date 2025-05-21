@@ -6,8 +6,7 @@ momentum: 0.9
 train_batchsize: 128
 test_batchsize: 128
 num_workers: 4
-#num_epochs: 300
-num_epochs: 10
+num_epochs: 300
 partition: "target"
 if_resume: False
 if_data_augmentation: False
