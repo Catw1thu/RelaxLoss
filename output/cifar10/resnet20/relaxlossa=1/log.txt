@@ -1,0 +1,1 @@
+LR       	Train Loss	Val Loss 	Train Acc	Val Acc  	Train Acc 5	Val Acc 5	
