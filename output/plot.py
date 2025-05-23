@@ -189,17 +189,17 @@ LOCAL_RESULTS_BASE_DIR = SCRIPT_DIR
 # 'path_from_output_dir': 相对于 LOCAL_RESULTS_BASE_DIR (即 output/ 目录) 的路径
 # 'model_arch_override': 有时 params.yml 中的 'model' 可能是通用名，这里可以覆盖以匹配 models.__dict__
 experiments_to_replot_config = {
-    "Vanilla_CIFAR10_ResNet20": {
-        "path_from_output_dir": "cifar10/resnet20/vanilla",  # <--- 替换为您的实际Vanilla实验子目录名
-        "label_for_plot": "Vanilla (CIFAR10, ResNet20)",
-        "plot_display_params": {
-            "xlim": (0, 8),
-            "range_for_bins": (0, 8),
-        },  # 绘图X轴显示和计算bins的范围
-        # "model_arch_override": "resnet20" # 如果params.yml中的model名不直接对应models.__dict__key
-    },
+    # "Vanilla_CIFAR10_ResNet20": {
+    #     "path_from_output_dir": "cifar10/resnet20/vanilla",  # <--- 替换为您的实际Vanilla实验子目录名
+    #     "label_for_plot": "Vanilla (CIFAR10, ResNet20)",
+    #     "plot_display_params": {
+    #         "xlim": (0, 8),
+    #         "range_for_bins": (0, 8),
+    #     },  # 绘图X轴显示和计算bins的范围
+    #     # "model_arch_override": "resnet20" # 如果params.yml中的model名不直接对应models.__dict__key
+    # },
     "RelaxLoss_a1_CIFAR10_ResNet20": {
-        "path_from_output_dir": "cifar10/resnet20/relaxlossa=1",  # <--- 替换为您的实际RelaxLoss实验子目录名
+        "path_from_output_dir": "cifar10/resnet20/relaxloss_a=1_epoches=300",  # <--- 替换为您的实际RelaxLoss实验子目录名
         "label_for_plot": "RelaxLoss α=1.0 (CIFAR10, ResNet20)",
         "plot_display_params": {"xlim": (0, 4), "range_for_bins": (0, 4)},
         # "model_arch_override": "resnet20"
