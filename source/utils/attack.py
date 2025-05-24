@@ -964,8 +964,8 @@ class NNAttack(nn.Module):
 class NNAttackTrainer(BaseTrainer):
     """Trainer for the NN attack"""
 
-    @staticmethod
-    def construct_dataloader(stat_pos, stat_neg):
+    # @staticmethod
+    def construct_dataloader(self, stat_pos, stat_neg):
         """Construct dataloader from statistics"""
         attack_data = np.concatenate([stat_neg, stat_pos], axis=0)
         attack_data = np.sort(attack_data, axis=1)
@@ -977,11 +977,23 @@ class NNAttackTrainer(BaseTrainer):
         np.random.shuffle(attack_indices)
         attack_data = attack_data[attack_indices]
         attack_targets = attack_targets[attack_indices]
-        tensor_x = torch.from_numpy(attack_data)
-        tensor_y = torch.from_numpy(attack_targets)
+        tensor_x = torch.from_numpy(attack_data).float()
+        tensor_y = torch.from_numpy(attack_targets).float()
         tensor_y = tensor_y.unsqueeze(-1).type(torch.FloatTensor)
         attack_dataset = data.TensorDataset(tensor_x, tensor_y)
-        attack_loader = data.DataLoader(attack_dataset, batch_size=256, shuffle=True)
+        attack_loader = data.DataLoader(
+            attack_dataset,
+            batch_size=256,
+            shuffle=True,
+            generator=(
+                self.cuda_generator
+                if self.use_cuda
+                and self.cuda_generator is not None
+                and attack_dataset
+                and len(attack_dataset) > 0
+                else None
+            ),
+        )
         return attack_loader
 
     def set_loader(self, s_logits_pos, s_logits_neg, t_logits_pos, t_logits_neg):

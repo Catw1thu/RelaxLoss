@@ -5,7 +5,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from sklearn import metrics
 
-__all__ = ['accuracy', 'accuracy_binary', 'metrics_binary', 'plot_roc']
+__all__ = ["accuracy", "accuracy_binary", "metrics_binary", "plot_roc"]
 
 
 def accuracy(output, target, topk=(1,)):
@@ -36,7 +36,7 @@ def accuracy_binary(output, target):
 
 def metrics_binary(ytest, predict_y_score):
     """Evaluation metrics for binary classification (including auc, ap, f1)"""
-    predict_y_label = np.array(predict_y_score >= 0.5).astype(np.int)
+    predict_y_label = np.array(predict_y_score >= 0.5).astype(np.int64)
     pos_num = np.sum(predict_y_label)
     frac = np.sum(predict_y_label) * 100 / len(ytest)
     try:
@@ -49,7 +49,9 @@ def metrics_binary(ytest, predict_y_score):
 
 
 def plot_roc(pos_results, neg_results):
-    labels = np.concatenate((np.zeros((len(neg_results),)), np.ones((len(pos_results),))))
+    labels = np.concatenate(
+        (np.zeros((len(neg_results),)), np.ones((len(pos_results),)))
+    )
     results = np.concatenate((neg_results, pos_results))
     fpr, tpr, threshold = metrics.roc_curve(labels, results, pos_label=1)
     auc = metrics.roc_auc_score(labels, results)
