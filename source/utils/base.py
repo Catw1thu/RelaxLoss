@@ -43,10 +43,37 @@ class BaseTrainer(object):
             # torch.set_default_tensor_type("torch.cuda.FloatTensor")
         else:
             self.device = torch.device("cpu")
-        if hasattr(self.args, "num_workers") and self.args.num_workers >= 1:
-            torch.multiprocessing.set_start_method("spawn")
-        self.device = torch.device("cuda" if self.use_cuda else "cpu")
-        print("self.usecuda", self.use_cuda)
+        # if hasattr(self.args, "num_workers") and self.args.num_workers >= 1:
+        #     torch.multiprocessing.set_start_method("spawn")
+        # self.device = torch.device("cuda" if self.use_cuda else "cpu")
+        # print("self.usecuda", self.use_cuda)
+
+        # 【核心修改】处理多进程启动方法
+        num_workers = getattr(self.args, "num_workers", 0)
+        if (
+            num_workers >= 1 and sys.platform == "linux"
+        ):  # 通常只在Linux上需要显式设置，WSL是Linux
+            # 仅在启动方法尚未设置时才进行设置
+            current_start_method = torch.multiprocessing.get_start_method(
+                allow_none=True
+            )
+            if current_start_method is None:
+                try:
+                    torch.multiprocessing.set_start_method("spawn")  # 不使用 force=True
+                    print("[BaseTrainer] 多进程启动方法已成功设为 'spawn'.")
+                except RuntimeError as e:
+                    # 如果这里仍然报错 "context has already been set"，说明在更早的地方被设置了
+                    # 或者 spawn 方法不被当前环境完全支持（尽管在Linux上通常可以）
+                    print(
+                        f"[BaseTrainer] 警告: 尝试设置多进程启动方法 'spawn' 失败: {e}. 当前方法: {torch.multiprocessing.get_start_method(allow_none=True)}"
+                    )
+            else:
+                print(
+                    f"[BaseTrainer] 多进程启动方法已被设为 '{current_start_method}'. 无需再次设置。"
+                )
+        elif num_workers < 1:
+            print("[BaseTrainer] num_workers < 1, 不需要设置多进程启动方法。")
+        # 移除原来没有条件检查的 torch.multiprocessing.set_start_method('spawn')
 
     def set_seed(self):
         """Set random seed"""
