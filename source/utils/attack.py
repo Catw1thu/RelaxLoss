@@ -18,18 +18,26 @@ from .eval import accuracy_binary, accuracy, metrics_binary
 from .misc import *
 from .base import BaseTrainer
 
-__all__ = ['Benchmark', 'Benchmark_Blackbox', 'BaseAttacker']
+__all__ = ["Benchmark", "Benchmark_Blackbox", "BaseAttacker"]
 
 
 class Benchmark(object):
-    def __init__(self, shadow_train_scores, shadow_test_scores, target_train_scores, target_test_scores):
+    def __init__(
+        self,
+        shadow_train_scores,
+        shadow_test_scores,
+        target_train_scores,
+        target_test_scores,
+    ):
         self.s_tr_scores = shadow_train_scores
         self.s_te_scores = shadow_test_scores
         self.t_tr_scores = target_train_scores
         self.t_te_scores = target_test_scores
         self.num_methods = len(self.s_tr_scores)
 
-    def load_labels(self, s_tr_labels, s_te_labels, t_tr_labels, t_te_labels, num_classes):
+    def load_labels(
+        self, s_tr_labels, s_te_labels, t_tr_labels, t_te_labels, num_classes
+    ):
         """Load sample labels"""
         self.num_classes = num_classes
         self.s_tr_labels = s_tr_labels
@@ -49,15 +57,25 @@ class Benchmark(object):
                 thre, max_acc = value, acc
         return thre
 
-    def _mem_inf_thre_perclass(self, v_name, s_tr_values, s_te_values, t_tr_values, t_te_values):
-        """MIA by thresholding per-class feature values """
+    def _mem_inf_thre_perclass(
+        self, v_name, s_tr_values, s_te_values, t_tr_values, t_te_values
+    ):
+        """MIA by thresholding per-class feature values"""
         t_tr_mem, t_te_non_mem = 0, 0
         for num in range(self.num_classes):
-            thre = self._thre_setting(s_tr_values[self.s_tr_labels == num], s_te_values[self.s_te_labels == num])
+            thre = self._thre_setting(
+                s_tr_values[self.s_tr_labels == num],
+                s_te_values[self.s_te_labels == num],
+            )
             t_tr_mem += np.sum(t_tr_values[self.t_tr_labels == num] >= thre)
             t_te_non_mem += np.sum(t_te_values[self.t_te_labels == num] < thre)
-        mem_inf_acc = 0.5 * (t_tr_mem / (len(self.t_tr_labels) + 0.0) + t_te_non_mem / (len(self.t_te_labels) + 0.0))
-        info = 'MIA via {n} (pre-class threshold): the attack acc is {acc:.3f}'.format(n=v_name, acc=mem_inf_acc)
+        mem_inf_acc = 0.5 * (
+            t_tr_mem / (len(self.t_tr_labels) + 0.0)
+            + t_te_non_mem / (len(self.t_te_labels) + 0.0)
+        )
+        info = "MIA via {n} (pre-class threshold): the attack acc is {acc:.3f}".format(
+            n=v_name, acc=mem_inf_acc
+        )
         print(info)
         return info, mem_inf_acc
 
@@ -67,18 +85,27 @@ class Benchmark(object):
         thre = self._thre_setting(s_tr_values, s_te_values)
         t_tr_mem += np.sum(t_tr_values >= thre)
         t_te_non_mem += np.sum(t_te_values < thre)
-        mem_inf_acc = 0.5 * (t_tr_mem / (len(t_tr_values) + 0.0) + t_te_non_mem / (len(t_te_values) + 0.0))
-        info = 'MIA via {n} (general threshold): the attack acc is {acc:.3f}'.format(n=v_name, acc=mem_inf_acc)
+        mem_inf_acc = 0.5 * (
+            t_tr_mem / (len(t_tr_values) + 0.0)
+            + t_te_non_mem / (len(t_te_values) + 0.0)
+        )
+        info = "MIA via {n} (general threshold): the attack acc is {acc:.3f}".format(
+            n=v_name, acc=mem_inf_acc
+        )
         print(info)
         return info, mem_inf_acc
 
     def _mem_inf_roc(self, v_name, s_tr_values, s_te_values, t_tr_values, t_te_values):
         """MIA AUC given the feature values (no need to threshold)"""
-        labels = np.concatenate((np.zeros((len(t_te_values),)), np.ones((len(t_tr_values),))))
+        labels = np.concatenate(
+            (np.zeros((len(t_te_values),)), np.ones((len(t_tr_values),)))
+        )
         results = np.concatenate((t_te_values, t_tr_values))
         auc = metrics.roc_auc_score(labels, results)
         ap = metrics.average_precision_score(labels, results)
-        info = 'MIA via {n}: the attack auc is {auc:.3f}, ap is {ap:.3f}'.format(n=v_name, auc=auc, ap=ap)
+        info = "MIA via {n}: the attack auc is {auc:.3f}, ap is {ap:.3f}".format(
+            n=v_name, auc=auc, ap=ap
+        )
         print(info)
         return info, auc
 
@@ -86,39 +113,59 @@ class Benchmark(object):
         """Compute Attack accuracy"""
         if if_per_class_thres:
             mem_inf_thre_func = self._mem_inf_thre_perclass
-            loginfo = 'per class threshold\n'
+            loginfo = "per class threshold\n"
         else:
             mem_inf_thre_func = self._mem_inf_thre
-            loginfo = 'overall threshold\n'
+            loginfo = "overall threshold\n"
         results = []
         for i in range(self.num_methods):
-            if score_signs[i] == '+':
-                info, result = mem_inf_thre_func(method_names[i], self.s_tr_scores[i], self.s_te_scores[i],
-                                                 self.t_tr_scores[i], self.t_te_scores[i])
-                loginfo += info + '\n'
+            if score_signs[i] == "+":
+                info, result = mem_inf_thre_func(
+                    method_names[i],
+                    self.s_tr_scores[i],
+                    self.s_te_scores[i],
+                    self.t_tr_scores[i],
+                    self.t_te_scores[i],
+                )
+                loginfo += info + "\n"
                 results.append(result)
 
             else:
-                info, result = mem_inf_thre_func(method_names[i], -self.s_tr_scores[i], -self.s_te_scores[i],
-                                                 -self.t_tr_scores[i], -self.t_te_scores[i])
-                loginfo += info + '\n'
+                info, result = mem_inf_thre_func(
+                    method_names[i],
+                    -self.s_tr_scores[i],
+                    -self.s_te_scores[i],
+                    -self.t_tr_scores[i],
+                    -self.t_te_scores[i],
+                )
+                loginfo += info + "\n"
                 results.append(result)
         return loginfo, method_names, results
 
     def compute_attack_auc(self, method_names, score_signs):
         """Compute attack AUC (and AP)"""
-        loginfo = ''
+        loginfo = ""
         results = []
         for i in range(self.num_methods):
-            if score_signs[i] == '+':
-                info, result = self._mem_inf_roc(method_names[i], self.s_tr_scores[i], self.s_te_scores[i],
-                                                 self.t_tr_scores[i], self.t_te_scores[i])
-                loginfo += info + '\n'
+            if score_signs[i] == "+":
+                info, result = self._mem_inf_roc(
+                    method_names[i],
+                    self.s_tr_scores[i],
+                    self.s_te_scores[i],
+                    self.t_tr_scores[i],
+                    self.t_te_scores[i],
+                )
+                loginfo += info + "\n"
                 results.append(result)
             else:
-                info, result = self._mem_inf_roc(method_names[i], -self.s_tr_scores[i], -self.s_te_scores[i],
-                                                 -self.t_tr_scores[i], -self.t_te_scores[i])
-                loginfo += info + '\n'
+                info, result = self._mem_inf_roc(
+                    method_names[i],
+                    -self.s_tr_scores[i],
+                    -self.s_te_scores[i],
+                    -self.t_tr_scores[i],
+                    -self.t_te_scores[i],
+                )
+                loginfo += info + "\n"
                 results.append(result)
         return loginfo, method_names, results
 
@@ -131,16 +178,44 @@ class Benchmark_Blackbox(Benchmark):
         self.t_te_outputs, self.t_te_loss = self.t_te_scores
 
         # whether the prediction is correct [num_samples,]
-        self.s_tr_corr = (np.argmax(self.s_tr_outputs, axis=1) == self.s_tr_labels).astype(int)
-        self.s_te_corr = (np.argmax(self.s_te_outputs, axis=1) == self.s_te_labels).astype(int)
-        self.t_tr_corr = (np.argmax(self.t_tr_outputs, axis=1) == self.t_tr_labels).astype(int)
-        self.t_te_corr = (np.argmax(self.t_te_outputs, axis=1) == self.t_te_labels).astype(int)
+        self.s_tr_corr = (
+            np.argmax(self.s_tr_outputs, axis=1) == self.s_tr_labels
+        ).astype(int)
+        self.s_te_corr = (
+            np.argmax(self.s_te_outputs, axis=1) == self.s_te_labels
+        ).astype(int)
+        self.t_tr_corr = (
+            np.argmax(self.t_tr_outputs, axis=1) == self.t_tr_labels
+        ).astype(int)
+        self.t_te_corr = (
+            np.argmax(self.t_te_outputs, axis=1) == self.t_te_labels
+        ).astype(int)
 
         # confidence prediction of the ground-truth class [num_samples,]
-        self.s_tr_conf = np.array([self.s_tr_outputs[i, self.s_tr_labels[i]] for i in range(len(self.s_tr_labels))])
-        self.s_te_conf = np.array([self.s_te_outputs[i, self.s_te_labels[i]] for i in range(len(self.s_te_labels))])
-        self.t_tr_conf = np.array([self.t_tr_outputs[i, self.t_tr_labels[i]] for i in range(len(self.t_tr_labels))])
-        self.t_te_conf = np.array([self.t_te_outputs[i, self.t_te_labels[i]] for i in range(len(self.t_te_labels))])
+        self.s_tr_conf = np.array(
+            [
+                self.s_tr_outputs[i, self.s_tr_labels[i]]
+                for i in range(len(self.s_tr_labels))
+            ]
+        )
+        self.s_te_conf = np.array(
+            [
+                self.s_te_outputs[i, self.s_te_labels[i]]
+                for i in range(len(self.s_te_labels))
+            ]
+        )
+        self.t_tr_conf = np.array(
+            [
+                self.t_tr_outputs[i, self.t_tr_labels[i]]
+                for i in range(len(self.t_tr_labels))
+            ]
+        )
+        self.t_te_conf = np.array(
+            [
+                self.t_te_outputs[i, self.t_te_labels[i]]
+                for i in range(len(self.t_te_labels))
+            ]
+        )
 
         # entropy of the prediction [num_samples,]
         self.s_tr_entr = self._entr_comp(self.s_tr_outputs)
@@ -168,9 +243,13 @@ class Benchmark_Blackbox(Benchmark):
         reverse_probs = 1 - probs
         log_reverse_probs = self._log_value(reverse_probs)
         modified_probs = np.copy(probs)
-        modified_probs[range(true_labels.size), true_labels] = reverse_probs[range(true_labels.size), true_labels]
+        modified_probs[range(true_labels.size), true_labels] = reverse_probs[
+            range(true_labels.size), true_labels
+        ]
         modified_log_probs = np.copy(log_reverse_probs)
-        modified_log_probs[range(true_labels.size), true_labels] = log_probs[range(true_labels.size), true_labels]
+        modified_log_probs[range(true_labels.size), true_labels] = log_probs[
+            range(true_labels.size), true_labels
+        ]
         return np.sum(np.multiply(modified_probs, modified_log_probs), axis=1)
 
     def _mem_inf_via_corr(self):
@@ -178,79 +257,122 @@ class Benchmark_Blackbox(Benchmark):
         t_tr_acc = np.sum(self.t_tr_corr) / (len(self.t_tr_corr) + 0.0)
         t_te_acc = np.sum(self.t_te_corr) / (len(self.t_te_corr) + 0.0)
         mem_inf_acc = 0.5 * (t_tr_acc + 1 - t_te_acc)
-        info = 'MIA via correctness, the attack acc is {acc1:.3f}, with train acc {acc2:.3f} and test acc {acc3:.3f}'.format(
-            acc1=mem_inf_acc, acc2=t_tr_acc, acc3=t_te_acc)
+        info = "MIA via correctness, the attack acc is {acc1:.3f}, with train acc {acc2:.3f} and test acc {acc3:.3f}".format(
+            acc1=mem_inf_acc, acc2=t_tr_acc, acc3=t_te_acc
+        )
         print(info)
         return info, mem_inf_acc
 
-    def compute_attack_acc(self, method_names=[], all_methods=True, if_per_class_thres=True):
+    def compute_attack_acc(
+        self, method_names=[], all_methods=True, if_per_class_thres=True
+    ):
         """Compute Attack accuracy"""
         if if_per_class_thres:
             mem_inf_thre_func = self._mem_inf_thre_perclass
-            loginfo = 'per class threshold\n'
+            loginfo = "per class threshold\n"
         else:
             mem_inf_thre_func = self._mem_inf_thre
-            loginfo = 'overall threshold\n'
+            loginfo = "overall threshold\n"
         results = []
         methods = []
-        if (all_methods) or ('correctness' in method_names):
+        if (all_methods) or ("correctness" in method_names):
             info, result = self._mem_inf_via_corr()
-            loginfo += info + '\n'
-        if (all_methods) or ('confidence' in method_names):
-            info, result = mem_inf_thre_func('confidence', self.s_tr_conf, self.s_te_conf,
-                                             self.t_tr_conf, self.t_te_conf)
-            loginfo += info + '\n'
+            loginfo += info + "\n"
+        if (all_methods) or ("confidence" in method_names):
+            info, result = mem_inf_thre_func(
+                "confidence",
+                self.s_tr_conf,
+                self.s_te_conf,
+                self.t_tr_conf,
+                self.t_te_conf,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('confidence ACC')
-        if (all_methods) or ('entropy' in method_names):
-            info, result = mem_inf_thre_func('entropy', -self.s_tr_entr, -self.s_te_entr,
-                                             -self.t_tr_entr, -self.t_te_entr)
-            loginfo += info + '\n'
+            methods.append("confidence ACC")
+        if (all_methods) or ("entropy" in method_names):
+            info, result = mem_inf_thre_func(
+                "entropy",
+                -self.s_tr_entr,
+                -self.s_te_entr,
+                -self.t_tr_entr,
+                -self.t_te_entr,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('entropy ACC')
-        if (all_methods) or ('modified entropy' in method_names):
-            info, result = mem_inf_thre_func('modified entropy', -self.s_tr_m_entr, -self.s_te_m_entr,
-                                             -self.t_tr_m_entr, -self.t_te_m_entr)
-            loginfo += info + '\n'
+            methods.append("entropy ACC")
+        if (all_methods) or ("modified entropy" in method_names):
+            info, result = mem_inf_thre_func(
+                "modified entropy",
+                -self.s_tr_m_entr,
+                -self.s_te_m_entr,
+                -self.t_tr_m_entr,
+                -self.t_te_m_entr,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('modified entropy ACC')
-        if (all_methods) or ('loss' in method_names):
-            info, result = mem_inf_thre_func('loss', -self.s_tr_loss, -self.s_te_loss,
-                                             -self.t_tr_loss, -self.t_te_loss)
-            loginfo += info + '\n'
+            methods.append("modified entropy ACC")
+        if (all_methods) or ("loss" in method_names):
+            info, result = mem_inf_thre_func(
+                "loss",
+                -self.s_tr_loss,
+                -self.s_te_loss,
+                -self.t_tr_loss,
+                -self.t_te_loss,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('loss ACC')
+            methods.append("loss ACC")
         return loginfo, methods, results
 
     def compute_attack_auc(self, method_names=[], all_methods=True):
         """Compute all attack AUC"""
-        loginfo = ''
+        loginfo = ""
         methods = []
         results = []
-        if (all_methods) or ('confidence' in method_names):
-            info, result = self._mem_inf_roc('confidence', self.s_tr_conf, self.s_te_conf,
-                                             self.t_tr_conf, self.t_te_conf)
-            loginfo += info + '\n'
+        if (all_methods) or ("confidence" in method_names):
+            info, result = self._mem_inf_roc(
+                "confidence",
+                self.s_tr_conf,
+                self.s_te_conf,
+                self.t_tr_conf,
+                self.t_te_conf,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('confidence AUC')
-        if (all_methods) or ('entropy' in method_names):
-            info, result = self._mem_inf_roc('entropy', -self.s_tr_entr, -self.s_te_entr,
-                                             -self.t_tr_entr, -self.t_te_entr)
-            loginfo += info + '\n'
+            methods.append("confidence AUC")
+        if (all_methods) or ("entropy" in method_names):
+            info, result = self._mem_inf_roc(
+                "entropy",
+                -self.s_tr_entr,
+                -self.s_te_entr,
+                -self.t_tr_entr,
+                -self.t_te_entr,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('entropy AUC')
-        if (all_methods) or ('modified entropy' in method_names):
-            info, result = self._mem_inf_roc('modified entropy', -self.s_tr_m_entr, -self.s_te_m_entr,
-                                             -self.t_tr_m_entr, -self.t_te_m_entr)
-            loginfo += info + '\n'
+            methods.append("entropy AUC")
+        if (all_methods) or ("modified entropy" in method_names):
+            info, result = self._mem_inf_roc(
+                "modified entropy",
+                -self.s_tr_m_entr,
+                -self.s_te_m_entr,
+                -self.t_tr_m_entr,
+                -self.t_te_m_entr,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('modified entropy AUC')
-        if (all_methods) or ('loss' in method_names):
-            info, result = self._mem_inf_roc('loss', -self.s_tr_loss, -self.s_te_loss,
-                                             -self.t_tr_loss, -self.t_te_loss)
-            loginfo += info + '\n'
+            methods.append("modified entropy AUC")
+        if (all_methods) or ("loss" in method_names):
+            info, result = self._mem_inf_roc(
+                "loss",
+                -self.s_tr_loss,
+                -self.s_te_loss,
+                -self.t_tr_loss,
+                -self.t_te_loss,
+            )
+            loginfo += info + "\n"
             results.append(result)
-            methods.append('modified entropy AUC')
+            methods.append("modified entropy AUC")
         return loginfo, methods, results
 
 
@@ -280,12 +402,12 @@ class BaseAttacker(object):
         """The function to set CUDA device."""
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
-            torch.set_default_tensor_type('torch.cuda.FloatTensor')
+            torch.set_default_tensor_type("torch.cuda.FloatTensor")
         self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
     def set_criterion(self):
         self.crossentropy = nn.CrossEntropyLoss()
-        self.crossentropy_noreduce = nn.CrossEntropyLoss(reduction='none')
+        self.crossentropy_noreduce = nn.CrossEntropyLoss(reduction="none")
         self.softmax = nn.Softmax(dim=1)
 
     def set_seed(self):
@@ -312,37 +434,235 @@ class BaseAttacker(object):
         self.loader_dict = None
 
     def load_models(self):
-        target_path = os.path.join(self.args.target_path, 'model.pt')
-        target_model = torch.load(target_path).to(self.device)
-        self.target_model = target_model
-        print('Loading target model from ', target_path)
-        shadow_path = os.path.join(self.args.shadow_path, 'model.pt')
-        shadow_model = torch.load(shadow_path).to(self.device)
-        self.shadow_model = shadow_model
-        print('Loading shadow model from ', shadow_path)
-        self.model_dict = {'t': self.target_model, 's': self.shadow_model}
+        """加载目标模型和影子模型，并处理DataParallel和PyTorch版本兼容性。"""
+        # --- 加载目标模型 ---
+        target_model_filename = "model.pt"
+        target_checkpoint_filename = "checkpoint.pkl"
+        target_path_pt = os.path.join(self.args.target_path, target_model_filename)
+        target_path_pkl = os.path.join(
+            self.args.target_path, target_checkpoint_filename
+        )
+        loaded_target = False
+
+        print(
+            f"  [Attacker] Attempting to load target model from: {self.args.target_path}"
+        )
+
+        if os.path.exists(target_path_pt):
+            try:
+                print(
+                    f"    Trying to load '{target_model_filename}' with weights_only=False..."
+                )
+                # 【核心修改】添加 weights_only=False
+                model_obj = torch.load(
+                    target_path_pt, map_location=self.device, weights_only=False
+                )
+                if isinstance(model_obj, torch.nn.DataParallel):
+                    self.target_model = model_obj.module
+                else:
+                    self.target_model = model_obj
+                self.target_model.to(self.device)
+                print(
+                    f"    Target model loaded successfully from '{target_model_filename}'."
+                )
+                loaded_target = True
+            except Exception as e_pt:
+                print(
+                    f"    Failed to load '{target_model_filename}' as full model object: {e_pt}"
+                )
+
+        if not loaded_target and os.path.exists(target_path_pkl):
+            try:
+                print(
+                    f"    Trying to load target model from '{target_checkpoint_filename}'..."
+                )
+                # checkpoint 通常是字典，加载字典本身时 weights_only=False 也是安全的（如果需要）
+                # 但通常我们更关心 state_dict
+                checkpoint = torch.load(
+                    target_path_pkl, map_location=self.device
+                )  # weights_only=False可以不加，因为主要是加载字典
+
+                # 确保 self.args.model 和 self.num_classes 在 Attacker 的 self.args 中可用
+                # 或者 Attacker 初始化时已创建了模型骨架 this.target_model_arch
+                # 这里假设 Attacker 的 __init__ 已经处理了模型骨架的创建或属性设置
+                if not hasattr(
+                    self, "target_model_arch_instance"
+                ):  # 简单起见，我们动态创建
+                    # 需要num_classes，它应该在set_dataloader中被设置，或从args传入
+                    if not hasattr(self, "num_classes") or self.num_classes is None:
+                        # 尝试从args或dataset推断，这是一个简化，理想情况下Attacker的args应包含
+                        self.num_classes = (
+                            10
+                            if "CIFAR10" in self.args.dataset
+                            else 100 if "CIFAR100" in self.args.dataset else None
+                        )
+                        if self.num_classes is None:
+                            raise ValueError(
+                                "num_classes not set in Attacker for model instantiation"
+                            )
+                    self.target_model_arch_instance = models.__dict__[self.args.model](
+                        num_classes=self.num_classes
+                    )
+
+                from collections import OrderedDict
+
+                new_state_dict = OrderedDict()
+                for k, v in checkpoint["model_state_dict"].items():
+                    name = k[7:] if k.startswith("module.") else k
+                    new_state_dict[name] = v
+                self.target_model_arch_instance.load_state_dict(new_state_dict)
+                self.target_model = self.target_model_arch_instance.to(self.device)
+                print(
+                    f"    Target model loaded successfully from '{target_checkpoint_filename}'."
+                )
+                loaded_target = True
+            except Exception as e_pkl:
+                print(
+                    f"    Failed to load target model from '{target_checkpoint_filename}': {e_pkl}"
+                )
+
+        if not loaded_target:
+            raise FileNotFoundError(
+                f"Could not load target model from {self.args.target_path} (tried {target_model_filename} and {target_checkpoint_filename})"
+            )
+
+        # --- 加载影子模型 (逻辑与目标模型类似) ---
+        shadow_model_filename = "model.pt"
+        shadow_checkpoint_filename = "checkpoint.pkl"
+        shadow_path_pt = os.path.join(self.args.shadow_path, shadow_model_filename)
+        shadow_path_pkl = os.path.join(
+            self.args.shadow_path, shadow_checkpoint_filename
+        )
+        loaded_shadow = False
+
+        print(
+            f"  [Attacker] Attempting to load shadow model from: {self.args.shadow_path}"
+        )
+
+        if os.path.exists(shadow_path_pt):
+            try:
+                print(
+                    f"    Trying to load '{shadow_model_filename}' with weights_only=False..."
+                )
+                # 【核心修改】添加 weights_only=False
+                model_obj = torch.load(
+                    shadow_path_pt, map_location=self.device, weights_only=False
+                )
+                if isinstance(model_obj, torch.nn.DataParallel):
+                    self.shadow_model = model_obj.module
+                else:
+                    self.shadow_model = model_obj
+                self.shadow_model.to(self.device)
+                print(
+                    f"    Shadow model loaded successfully from '{shadow_model_filename}'."
+                )
+                loaded_shadow = True
+            except Exception as e_pt_s:
+                print(
+                    f"    Failed to load '{shadow_model_filename}' as full model object: {e_pt_s}"
+                )
+
+        if not loaded_shadow and os.path.exists(shadow_path_pkl):
+            try:
+                print(
+                    f"    Trying to load shadow model from '{shadow_checkpoint_filename}'..."
+                )
+                checkpoint = torch.load(shadow_path_pkl, map_location=self.device)
+
+                if not hasattr(
+                    self, "shadow_model_arch_instance"
+                ):  # 简单起见，我们动态创建
+                    if (
+                        not hasattr(self, "num_classes") or self.num_classes is None
+                    ):  # 应已从target模型推断或设置
+                        self.num_classes = (
+                            10
+                            if "CIFAR10" in self.args.dataset
+                            else 100 if "CIFAR100" in self.args.dataset else None
+                        )
+                        if self.num_classes is None:
+                            raise ValueError(
+                                "num_classes not set in Attacker for model instantiation"
+                            )
+                    self.shadow_model_arch_instance = models.__dict__[self.args.model](
+                        num_classes=self.num_classes
+                    )
+
+                from collections import OrderedDict
+
+                new_state_dict = OrderedDict()
+                for k, v in checkpoint["model_state_dict"].items():
+                    name = k[7:] if k.startswith("module.") else k
+                    new_state_dict[name] = v
+                self.shadow_model_arch_instance.load_state_dict(new_state_dict)
+                self.shadow_model = self.shadow_model_arch_instance.to(self.device)
+                print(
+                    f"    Shadow model loaded successfully from '{shadow_checkpoint_filename}'."
+                )
+                loaded_shadow = True
+            except Exception as e_pkl_s:
+                print(
+                    f"    Failed to load shadow model from '{shadow_checkpoint_filename}': {e_pkl_s}"
+                )
+
+        if not loaded_shadow:
+            raise FileNotFoundError(
+                f"Could not load shadow model from {self.args.shadow_path} (tried {shadow_model_filename} and {shadow_checkpoint_filename})"
+            )
+
+        # 确保模型都设置为评估模式
+        if hasattr(self, "target_model") and self.target_model:
+            self.target_model.eval()
+        if hasattr(self, "shadow_model") and self.shadow_model:
+            self.shadow_model.eval()
+
+        # 原来的 model_dict 赋值，如果还需要的话
+        self.model_dict = {}
+        if hasattr(self, "target_model"):
+            self.model_dict["t"] = self.target_model
+        if hasattr(self, "shadow_model"):
+            self.model_dict["s"] = self.shadow_model
+        # target_path = os.path.join(self.args.target_path, 'model.pt')
+        # target_model = torch.load(target_path).to(self.device)
+        # self.target_model = target_model
+        # print('Loading target model from ', target_path)
+        # shadow_path = os.path.join(self.args.shadow_path, 'model.pt')
+        # shadow_model = torch.load(shadow_path).to(self.device)
+        # self.shadow_model = shadow_model
+        # print('Loading shadow model from ', shadow_path)
+        # self.model_dict = {'t': self.target_model, 's': self.shadow_model}
 
     def run_blackbox_attacks(self):
-        """Run black-box attacks """
-        t_logits_pos, t_posteriors_pos, t_losses_pos, t_labels_pos = self.get_blackbox_statistics(
-            self.target_trainloader, self.target_model)
-        t_logits_neg, t_posteriors_neg, t_losses_neg, t_labels_neg = self.get_blackbox_statistics(
-            self.target_testloader, self.target_model)
-        s_logits_pos, s_posteriors_pos, s_losses_pos, s_labels_pos = self.get_blackbox_statistics(
-            self.shadow_trainloader, self.shadow_model)
-        s_logits_neg, s_posteriors_neg, s_losses_neg, s_labels_neg = self.get_blackbox_statistics(
-            self.shadow_testloader, self.shadow_model)
+        """Run black-box attacks"""
+        t_logits_pos, t_posteriors_pos, t_losses_pos, t_labels_pos = (
+            self.get_blackbox_statistics(self.target_trainloader, self.target_model)
+        )
+        t_logits_neg, t_posteriors_neg, t_losses_neg, t_labels_neg = (
+            self.get_blackbox_statistics(self.target_testloader, self.target_model)
+        )
+        s_logits_pos, s_posteriors_pos, s_losses_pos, s_labels_pos = (
+            self.get_blackbox_statistics(self.shadow_trainloader, self.shadow_model)
+        )
+        s_logits_neg, s_posteriors_neg, s_losses_neg, s_labels_neg = (
+            self.get_blackbox_statistics(self.shadow_testloader, self.shadow_model)
+        )
 
         ## metric_based attacks
-        bb_benchmark = Benchmark_Blackbox(shadow_train_scores=[s_posteriors_pos, s_losses_pos],
-                                          shadow_test_scores=[s_posteriors_neg, s_losses_neg],
-                                          target_train_scores=[t_posteriors_pos, t_losses_pos],
-                                          target_test_scores=[t_posteriors_neg, t_losses_neg])
-        bb_benchmark.load_labels(s_labels_pos, s_labels_neg, t_labels_pos, t_labels_neg, self.num_classes)
+        bb_benchmark = Benchmark_Blackbox(
+            shadow_train_scores=[s_posteriors_pos, s_losses_pos],
+            shadow_test_scores=[s_posteriors_neg, s_losses_neg],
+            target_train_scores=[t_posteriors_pos, t_losses_pos],
+            target_test_scores=[t_posteriors_neg, t_losses_neg],
+        )
+        bb_benchmark.load_labels(
+            s_labels_pos, s_labels_neg, t_labels_pos, t_labels_neg, self.num_classes
+        )
         bb_benchmark.compute_bb_scores()
 
         ## nn attack
-        info, names, results = self.run_nn_attack(s_logits_pos, s_logits_neg, t_logits_pos, t_logits_neg)
+        info, names, results = self.run_nn_attack(
+            s_logits_pos, s_logits_neg, t_logits_pos, t_logits_neg
+        )
 
         ### Save results
         log_info = info
@@ -364,56 +684,94 @@ class BaseAttacker(object):
         """Run white-box attacks"""
 
         def run_case(partition, subset, grad_type):
-            if partition == 's':
+            if partition == "s":
                 model_dir = self.args.shadow_path
             else:
-                assert partition == 't'
+                assert partition == "t"
                 model_dir = self.args.target_path
-            filename = f'{partition}_{subset}_{grad_type}'
-            loadername = f'{partition}_{subset}'
-            path = os.path.join(model_dir, 'attack', filename + '.pkl')
+            filename = f"{partition}_{subset}_{grad_type}"
+            loadername = f"{partition}_{subset}"
+            path = os.path.join(model_dir, "attack", filename + ".pkl")
 
             if os.path.exists(path):
                 stat = unpickle(path)
             else:
-                if grad_type == 'x':
-                    stat = self.gradient_based_attack_wrt_x(self.loader_dict[loadername], self.model_dict[partition])
+                if grad_type == "x":
+                    stat = self.gradient_based_attack_wrt_x(
+                        self.loader_dict[loadername], self.model_dict[partition]
+                    )
                 else:
-                    assert grad_type == 'w'
-                    stat = self.gradient_based_attack_wrt_w(self.loader_dict[loadername], self.model_dict[partition])
+                    assert grad_type == "w"
+                    stat = self.gradient_based_attack_wrt_w(
+                        self.loader_dict[loadername], self.model_dict[partition]
+                    )
                 savepickle(stat, path)
             return stat
 
         ### Grad w.r.t. x
-        s_pos_x = run_case('s', 'pos', 'x')
-        s_neg_x = run_case('s', 'neg', 'x')
-        t_pos_x = run_case('t', 'pos', 'x')
-        t_neg_x = run_case('t', 'neg', 'x')
+        s_pos_x = run_case("s", "pos", "x")
+        s_neg_x = run_case("s", "neg", "x")
+        t_pos_x = run_case("t", "pos", "x")
+        t_neg_x = run_case("t", "neg", "x")
 
         ### Grad w.r.t. w
-        s_pos_w = run_case('s', 'pos', 'w')
-        s_neg_w = run_case('s', 'neg', 'w')
-        t_pos_w = run_case('t', 'pos', 'w')
-        t_neg_w = run_case('t', 'neg', 'w')
+        s_pos_w = run_case("s", "pos", "w")
+        s_neg_w = run_case("s", "neg", "w")
+        t_pos_w = run_case("t", "pos", "w")
+        t_neg_w = run_case("t", "neg", "w")
 
         ### Save results
         all_names = []
         all_results = []
-        log_info = ''
-        wb_benchmark = Benchmark(shadow_train_scores=[s_pos_x['l1'], s_pos_x['l2'], s_pos_w['l1'], s_pos_w['l2']],
-                                 shadow_test_scores=[s_neg_x['l1'], s_neg_x['l2'], s_neg_w['l1'], s_neg_w['l2']],
-                                 target_train_scores=[t_pos_x['l1'], t_pos_x['l2'], t_pos_w['l1'], t_pos_w['l2']],
-                                 target_test_scores=[t_neg_x['l1'], t_neg_x['l2'], t_neg_w['l1'], t_neg_w['l2']])
+        log_info = ""
+        wb_benchmark = Benchmark(
+            shadow_train_scores=[
+                s_pos_x["l1"],
+                s_pos_x["l2"],
+                s_pos_w["l1"],
+                s_pos_w["l2"],
+            ],
+            shadow_test_scores=[
+                s_neg_x["l1"],
+                s_neg_x["l2"],
+                s_neg_w["l1"],
+                s_neg_w["l2"],
+            ],
+            target_train_scores=[
+                t_pos_x["l1"],
+                t_pos_x["l2"],
+                t_pos_w["l1"],
+                t_pos_w["l2"],
+            ],
+            target_test_scores=[
+                t_neg_x["l1"],
+                t_neg_x["l2"],
+                t_neg_w["l1"],
+                t_neg_w["l2"],
+            ],
+        )
         info, names, results = wb_benchmark.compute_attack_acc(
-            method_names=['grad_wrt_x_l1 ACC', 'grad_wrt_x_l2 ACC', 'grad_wrt_w_l1 ACC', 'grad_wrt_w_l2 ACC'],
-            score_signs=['-', '-', '-', '-'])
+            method_names=[
+                "grad_wrt_x_l1 ACC",
+                "grad_wrt_x_l2 ACC",
+                "grad_wrt_w_l1 ACC",
+                "grad_wrt_w_l2 ACC",
+            ],
+            score_signs=["-", "-", "-", "-"],
+        )
         all_names.append(names)
         all_results.append(results)
         log_info += info
 
         info, names, results = wb_benchmark.compute_attack_auc(
-            method_names=['grad_wrt_x_l1 AUC', 'grad_wrt_x_l2 AUC', 'grad_wrt_w_l1 AUC', 'grad_wrt_w_l2 AUC'],
-            score_signs=['-', '-', '-', '-'])
+            method_names=[
+                "grad_wrt_x_l1 AUC",
+                "grad_wrt_x_l2 AUC",
+                "grad_wrt_w_l1 AUC",
+                "grad_wrt_w_l2 AUC",
+            ],
+            score_signs=["-", "-", "-", "-"],
+        )
         all_names.append(names)
         all_results.append(results)
         log_info += info
@@ -424,20 +782,30 @@ class BaseAttacker(object):
 
     def save_results(self):
         """Save to attack_log.txt file and .csv file"""
-        with open(os.path.join(self.save_dir, 'attack_log.txt'), 'a+') as f:
-            log_info = '=' * 100 + '\n' + self.args.target_path + '\n' + self.wb_loginfo + '\n' + self.bb_loginfo
+        with open(os.path.join(self.save_dir, "attack_log.txt"), "a+") as f:
+            log_info = (
+                "=" * 100
+                + "\n"
+                + self.args.target_path
+                + "\n"
+                + self.wb_loginfo
+                + "\n"
+                + self.bb_loginfo
+            )
             f.writelines(log_info)
-        write_csv(os.path.join(self.save_dir, 'attack_log.csv'),
-                  self.args.target_path.split('/')[-1],
-                  np.concatenate([self.bb_results, self.wb_results]),
-                  np.concatenate([self.bb_names, self.wb_names]))
+        write_csv(
+            os.path.join(self.save_dir, "attack_log.csv"),
+            self.args.target_path.split("/")[-1],
+            np.concatenate([self.bb_results, self.wb_results]),
+            np.concatenate([self.bb_names, self.wb_names]),
+        )
 
     def gradient_based_attack_wrt_x(self, dataloader, model):
         """Gradient w.r.t. input"""
         model.eval()
 
         ## store results
-        names = ['l1', 'l2', 'Min', 'Max', 'Mean', 'Skewness', 'Kurtosis']
+        names = ["l1", "l2", "Min", "Max", "Mean", "Skewness", "Kurtosis"]
         all_stats = {}
         for name in names:
             all_stats[name] = []
@@ -472,7 +840,7 @@ class BaseAttacker(object):
         model.eval()
 
         ## store results
-        names = ['l1', 'l2', 'Min', 'Max', 'Mean', 'Skewness', 'Kurtosis']
+        names = ["l1", "l2", "Min", "Max", "Mean", "Skewness", "Kurtosis"]
         all_stats = {}
         for name in names:
             all_stats[name] = []
@@ -530,30 +898,44 @@ class BaseAttacker(object):
         losses = np.concatenate(losses)
         return logits, posteriors, losses, labels
 
-    def run_nn_attack(self, s_logits_pos, s_logits_neg, t_logits_pos, t_logits_neg, if_load_checkpoint=True):
-        checkpoint_dir = os.path.join(self.args.shadow_path, 'attack', 'nn')
+    def run_nn_attack(
+        self,
+        s_logits_pos,
+        s_logits_neg,
+        t_logits_pos,
+        t_logits_neg,
+        if_load_checkpoint=True,
+    ):
+        checkpoint_dir = os.path.join(self.args.shadow_path, "attack", "nn")
         mkdir(checkpoint_dir)
         trainer = NNAttackTrainer(self.args, checkpoint_dir)
         trainer.set_loader(s_logits_pos, s_logits_neg, t_logits_pos, t_logits_neg)
-        if os.path.exists(os.path.join(checkpoint_dir, 'attack_model.pt')) and if_load_checkpoint:
-            attack_model = torch.load(os.path.join(checkpoint_dir, 'attack_model.pt')).to(self.device)
-            print('Load NN attack from checkpoint_dir')
+        if (
+            os.path.exists(os.path.join(checkpoint_dir, "attack_model.pt"))
+            and if_load_checkpoint
+        ):
+            attack_model = torch.load(
+                os.path.join(checkpoint_dir, "attack_model.pt")
+            ).to(self.device)
+            print("Load NN attack from checkpoint_dir")
         else:
             max_epoch = 200
             lr = 0.001
             attack_model = NNAttack(self.num_classes)
             optimizer = optim.Adam(attack_model.parameters(), lr=lr)
             logger = trainer.logger
-            print('Train NN attack')
+            print("Train NN attack")
             for _ in range(max_epoch):
                 train_loss, train_acc = trainer.train(attack_model, optimizer)
                 test_loss, test_acc, _ = trainer.test(attack_model)
                 logger.append([train_loss, test_loss, train_acc, test_acc])
-            torch.save(attack_model, os.path.join(checkpoint_dir, 'attack_model.pt'))
+            torch.save(attack_model, os.path.join(checkpoint_dir, "attack_model.pt"))
         _, attack_acc, attack_auc = trainer.test(attack_model)
-        info = 'MIA via NN : the attack acc is {acc:.3f} \n'.format(acc=attack_acc / 100)
-        info += 'MIA via NN : the attack auc is {auc:.3f} \n'.format(auc=attack_auc)
-        return info, ['NN ACC', 'NN AUC'], [attack_acc / 100, attack_auc]
+        info = "MIA via NN : the attack acc is {acc:.3f} \n".format(
+            acc=attack_acc / 100
+        )
+        info += "MIA via NN : the attack auc is {auc:.3f} \n".format(auc=attack_auc)
+        return info, ["NN ACC", "NN AUC"], [attack_acc / 100, attack_auc]
 
 
 class NNAttack(nn.Module):
@@ -587,8 +969,10 @@ class NNAttackTrainer(BaseTrainer):
         """Construct dataloader from statistics"""
         attack_data = np.concatenate([stat_neg, stat_pos], axis=0)
         attack_data = np.sort(attack_data, axis=1)
-        attack_targets = np.concatenate([np.zeros(len(stat_neg)), np.ones(len(stat_pos))])
-        attack_targets = attack_targets.astype(np.int)
+        attack_targets = np.concatenate(
+            [np.zeros(len(stat_neg)), np.ones(len(stat_pos))]
+        )
+        attack_targets = attack_targets.astype(np.int64)
         attack_indices = np.arange(len(attack_data))
         np.random.shuffle(attack_indices)
         attack_data = attack_data[attack_indices]
@@ -619,7 +1003,7 @@ class NNAttackTrainer(BaseTrainer):
         dataload_time = AverageMeter()
         time_stamp = time.time()
 
-        bar = Bar('Processing', max=len(self.trainloader))
+        bar = Bar("Processing", max=len(self.trainloader))
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
 
@@ -651,7 +1035,7 @@ class NNAttackTrainer(BaseTrainer):
             time_stamp = time.time()
 
             ### Progress bar
-            bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f}'.format(
+            bar.suffix = "({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f}".format(
                 batch=batch_idx + 1,
                 size=len(self.trainloader),
                 data=dataload_time.avg,
@@ -659,7 +1043,7 @@ class NNAttackTrainer(BaseTrainer):
                 total=bar.elapsed_td,
                 eta=bar.eta_td,
                 loss=losses.avg,
-                top1=top1.avg
+                top1=top1.avg,
             )
             bar.next()
 
@@ -678,7 +1062,7 @@ class NNAttackTrainer(BaseTrainer):
         ytest = []
         ypred_score = []
 
-        bar = Bar('Processing', max=len(self.testloader))
+        bar = Bar("Processing", max=len(self.testloader))
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(self.testloader):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -711,7 +1095,7 @@ class NNAttackTrainer(BaseTrainer):
                 time_stamp = time.time()
 
                 ### Progress bar
-                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f}'.format(
+                bar.suffix = "({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f}".format(
                     batch=batch_idx + 1,
                     size=len(self.testloader),
                     data=dataload_time.avg,
@@ -732,6 +1116,6 @@ class NNAttackTrainer(BaseTrainer):
         """Set up logger"""
         title = self.args.dataset
         self.start_epoch = 0
-        logger = Logger(os.path.join(self.save_dir, 'log.txt'), title=title)
-        logger.set_names(['Train Loss', 'Val Loss', 'Train Acc', 'Val Acc'])
+        logger = Logger(os.path.join(self.save_dir, "log.txt"), title=title)
+        logger.set_names(["Train Loss", "Val Loss", "Train Acc", "Val Acc"])
         self.logger = logger
